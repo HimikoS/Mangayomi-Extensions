@@ -1,0 +1,24 @@
+[
+  {
+    "name": "TMOHentai",
+    "id": 123456789,
+    "baseUrl": "https://tmohentai.com",
+    "lang": "es",
+    "typeSource": "single",
+    "iconUrl": "https://tmohentai.com/favicon.ico",
+    "dateFormat": "yyyy-MM-dd",
+    "dateFormatLocale": "es",
+    "isNsfw": true,
+    "hasCloudflare": false,
+    "sourceCodeUrl": "https://raw.githubusercontent.com/HimikoS/Extensions-Dartotsu/refs/heads/main/tmohentai.js",
+    "apiUrl": "",
+    "version": "1.1.2",
+    "isManga": true,
+    "itemType": 0,
+    "isFullData": false,
+    "appMinVerReq": "0.5.0",
+    "sourceCodeLanguage": 1,
+    "additionalParams": "",
+    "notes": ""
+  }
+]
