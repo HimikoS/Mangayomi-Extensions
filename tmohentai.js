@@ -2,148 +2,159 @@ var mangayomiSources = [{
     "name": "TMOHentai",
     "langs": ["es"],
     "baseUrl": "https://tmohentai.com",
-    "apiUrl": "",
     "iconUrl": "https://tmohentai.com/favicon.ico",
     "typeSource": "single",
     "itemType": 0,
     "isNsfw": true,
-    "version": "1.1.3",
-    "pkgPath": "tmohentai.js",
-    "notes": "Corregido modo cascada para cargar todas las páginas"
+    "version": "1.2.7",
+    "pkgPath": "tmohentai.js"
 }];
 
 class DefaultExtension extends MProvider {
     getHeaders(url) {
         return {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "User-Agent": "Mozilla/5.0 (Linux; Android 13; SM-G960F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Mobile Safari/537.36",
             "Referer": this.source.baseUrl + "/"
         };
     }
 
+    async request(url) {
+        const res = await new Client().get(url, this.getHeaders(url));
+        if (res && res.statusCode === 403) {
+            throw new Error("403 Cloudflare: Abre el WebView para verificar.");
+        }
+        return res;
+    }
+
     async getPopular(page) {
         const url = `${this.source.baseUrl}/section/hentai?view=thumbnails&page=${page}&order=popularity&order-dir=desc&type=all`;
-        const res = await new Client().get(url, this.getHeaders(url));
+        const res = await this.request(url);
         return this.mangaListFromPage(res.body);
     }
 
     async getLatestUpdates(page) {
         const url = `${this.source.baseUrl}/section/hentai?view=thumbnails&page=${page}&order=publication_date&order-dir=desc&type=all`;
-        const res = await new Client().get(url, this.getHeaders(url));
+        const res = await this.request(url);
         return this.mangaListFromPage(res.body);
     }
     
+    // ✅ BUSCADOR CON RUTA ESPECIAL PARA GROUPS
     async search(query, page, filters) {
-        const url = `${this.source.baseUrl}/search?search=${query}&page=${page}`;
-        const res = await new Client().get(url, this.getHeaders(url));
+        let searchText = query ? String(query).trim() : "";
+        let searchBy = "name"; 
+        let sortParam = "&order=publication_date&order-dir=desc";
+        let section = "hentai"; 
+        let genres = [];
+        let tagFromList = "";
+
+        if (filters) {
+            for (const filter of filters) {
+                const name = String(filter.name);
+                const state = filter.state;
+
+                if (state === null || state === undefined || state === "") continue;
+
+                if (name === "Sección" && filter.values) {
+                    section = filter.values[state].value;
+                }
+                if (name === "Buscar por" && filter.values) {
+                    searchBy = filter.values[state].value;
+                }
+                if (name === "Filtro de Texto" && typeof state === 'string') {
+                    searchText = state.trim();
+                }
+                if (name === "Tags Populares" && filter.values) {
+                    const val = filter.values[state].value;
+                    if (val !== "") {
+                        tagFromList = val;
+                        searchBy = "tag"; 
+                    }
+                }
+                if (name === "Ordenar por" && filter.values) {
+                    sortParam = filter.values[state].value;
+                }
+                if (name === "Géneros" && Array.isArray(state)) {
+                    for (const cb of state) {
+                        if (cb.state === true) genres.push(encodeURIComponent(cb.name));
+                    }
+                }
+            }
+        }
+
+        if (tagFromList !== "") {
+            searchText = (searchText !== "") ? `${searchText} ${tagFromList}` : tagFromList;
+        }
+
+        // --- CORRECCIÓN DE RUTA ---
+        // Si es "groups", la URL es /groups. Si es otra cosa, es /section/nombre
+        let basePath = section === "groups" 
+            ? `${this.source.baseUrl}/groups` 
+            : `${this.source.baseUrl}/section/${section}`;
+
+        let url = `${basePath}?view=thumbnails&page=${page}${sortParam}`;
+        url += `&search[searchText]=${encodeURIComponent(searchText)}`;
+        url += `&search[searchBy]=${searchBy}`;
+        url += `&type=all`; 
+
+        if (genres.length > 0) {
+            genres.forEach(g => { url += `&genders[]=${g}`; });
+        }
+
+        const res = await this.request(url);
         return this.mangaListFromPage(res.body);
     }
 
     async getDetail(url) {
         if (!url.startsWith("http")) url = this.source.baseUrl + url;
-    
-        const res = await new Client().get(url, this.getHeaders(url));
+        const res = await this.request(url);
         const doc = new Document(res.body);
         const detail = {};
     
-        // 1. NOMBRE
         const nameElement = doc.selectFirst("h1, .panel-heading h3, .manga-title");
         detail.name = nameElement ? nameElement.text.trim() : "Manga";
     
-        // 2. IMAGEN (PORTADA)
         const imgElement = doc.selectFirst("img.content-thumbnail-cover, img.img-responsive, .manga-cover");
         detail.imageUrl = imgElement ? imgElement.attr("src") : "";
     
-        // 3. ARTISTA / AUTOR
         const artistElement = doc.selectFirst("a[href*='searchBy]=artist']");
-        const artistName = artistElement ? artistElement.text.trim() : "Desconocido";
-        detail.author = artistName;
-        detail.artist = artistName;
+        detail.author = artistElement ? artistElement.text.trim() : "Desconocido";
     
-        // 4. GÉNEROS + TAGS
-        const genres = doc
-            .select("a[href*='genders[]'], a[href*='searchBy]=tag']")
-            .map(e => e.text.trim())
-            .filter(t => t !== "");
-        detail.genre = genres;
-    
-        // 5. FANSUB / UPLOADER
-        const groupElement = doc.selectFirst("a[href*='/groups/']");
-        const groupName = groupElement ? groupElement.text.trim() : "No especificado";
-    
-        // 6. DESCRIPCIÓN
+        detail.genre = doc.select("a[href*='genders[]'], a[href*='searchBy]=tag']").map(e => e.text.trim());
+        
         const descElement = doc.selectFirst("div.panel-body p, #synopsis");
-        detail.description = descElement
-            ? descElement.text.trim()
-            : "Manga de TMOHentai";
-    
-        // 7. ESTADO (1 = FINALIZADO)
+        detail.description = descElement ? descElement.text.trim() : "Manga de TMOHentai";
         detail.status = 1;
     
-        // 8. CAPÍTULOS (CASCADE)
         const chapters = [];
         const readBtn = doc.selectFirst("a.lanzador, a[href*='/reader/']");
-    
         if (readBtn) {
             let chUrl = readBtn.attr("href");
             if (!chUrl.startsWith("http")) chUrl = this.source.baseUrl + chUrl;
-    
+            
             let cleanUrl = chUrl.split("/paginated")[0];
             if (cleanUrl.endsWith("/")) cleanUrl = cleanUrl.slice(0, -1);
             if (!cleanUrl.endsWith("/cascade")) cleanUrl += "/cascade";
     
-            chapters.push({
-                name: "Capítulo Único (Completo)",
-                url: cleanUrl,
-                scanlator: groupName,
-            });
+            chapters.push({ name: "Capítulo Único", url: cleanUrl });
         }
-    
         detail.chapters = chapters;
         return detail;
     }
 
     async getPageList(url) {
-        // Aseguramos que la URL sea completa
-        if (!url.startsWith("http")) url = this.source.baseUrl + url;
-        
-        // REFUERZO: Si por alguna razón la URL no trae cascade, se lo ponemos aquí también
-        let finalUrl = url.split('/paginated')[0];
-        if (finalUrl.endsWith('/')) finalUrl = finalUrl.slice(0, -1);
-        if (!finalUrl.endsWith('/cascade')) finalUrl += '/cascade';
-
-        const res = await new Client().get(finalUrl, this.getHeaders(finalUrl));
+        const res = await this.request(url);
         const body = res.body;
         const pages = [];
-
-        // MODO 1: Regex (El que te funcionó en el test)
         const regex = /https?:\/\/[^"'>]+\.(?:jpg|jpeg|png|webp|avif)/gi;
         const matches = body.match(regex) || [];
 
         for (let src of matches) {
             if (src.includes("/contents/") && !src.includes("cover") && !src.includes("logo")) {
                 if (!pages.find(p => p.url === src)) {
-                    pages.push({ 
-                        url: src.trim(), 
-                        headers: { "Referer": finalUrl } 
-                    });
+                    pages.push({ url: src.trim(), headers: { "Referer": url } });
                 }
             }
         }
-
-        // MODO 2: Fallback por selectores
-        if (pages.length === 0) {
-            const doc = new Document(body);
-            const imgElements = doc.select("img.viewer-image, img.img-fluid, .viewer-container img");
-            for (const img of imgElements) {
-                let src = img.attr("data-src") || img.attr("src");
-                if (src && src.includes("/contents/") && !src.includes("logo")) {
-                    if (src.startsWith("//")) src = "https:" + src;
-                    else if (src.startsWith("/")) src = this.source.baseUrl + src;
-                    pages.push({ url: src, headers: { "Referer": finalUrl } });
-                }
-            }
-        }
-
         return pages;
     }
 
@@ -165,38 +176,30 @@ class DefaultExtension extends MProvider {
 
     getFilterList() {
         return [
-            { type_name: "HeaderFilter", name: "Tags Populares" },
+            {
+                type_name: "SelectFilter",
+                name: "Buscar por",
+                state: 0,
+                values: [
+                    { type_name: "SelectOption", name: "Nombre", value: "name" },
+                    { type_name: "SelectOption", name: "Artista", value: "artist" },
+                    { type_name: "SelectOption", name: "Revista (Magazine)", value: "magazine" },
+                    { type_name: "SelectOption", name: "Etiqueta (Tag)", value: "tag" },
+                ]
+            },
+            { type_name: "TextFilter", name: "Filtro de Texto", state: "" },
+            { type_name: "SeparatorFilter" },
             {
                 type_name: "SelectFilter",
                 name: "Tags Populares",
                 state: 0,
                 values: [
                     { type_name: "SelectOption", name: "Ninguno", value: "" },
-                    { type_name: "SelectOption", name: "Big Breasts", value: "big-breasts" },
-                    { type_name: "SelectOption", name: "Anal", value: "anal" },
-                    { type_name: "SelectOption", name: "Yuri", value: "yuri" },
-                    { type_name: "SelectOption", name: "Incest", value: "incest" },
-                    { type_name: "SelectOption", name: "Milf", value: "milf" },
-                    { type_name: "SelectOption", name: "Lolicon", value: "lolicon" },
-                    { type_name: "SelectOption", name: "Shota", value: "shota" },
-                    { type_name: "SelectOption", name: "Blowjob", value: "blowjob" },
-                    { type_name: "SelectOption", name: "Masturbation", value: "masturbation" },
-                    { type_name: "SelectOption", name: "Group Sex", value: "group-sex" }
-                ]
-            },
-            { type_name: "SeparatorFilter" },
-            { type_name: "HeaderFilter", name: "Búsqueda Manual" },
-            { type_name: "TextFilter", name: "Artist", state: "" },
-            { type_name: "TextFilter", name: "Group", state: "" },
-            { type_name: "TextFilter", name: "Tag Manual", state: "" },
-            {
-                type_name: "SelectFilter",
-                name: "Language",
-                state: 0,
-                values: [
-                    { type_name: "SelectOption", name: "Todos", value: "" },
-                    { type_name: "SelectOption", name: "English", value: "english" },
-                    { type_name: "SelectOption", name: "Japanese", value: "japanese" }
+                    { type_name: "SelectOption", name: "Big Breasts", value: "Big Breasts" },
+                    { type_name: "SelectOption", name: "Anal", value: "Anal" },
+                    { type_name: "SelectOption", name: "Yuri", value: "Yuri" },
+                    { type_name: "SelectOption", name: "Incesto", value: "Incesto" },
+                    { type_name: "SelectOption", name: "Milf", value: "Milf" }
                 ]
             },
             {
@@ -204,9 +207,24 @@ class DefaultExtension extends MProvider {
                 name: "Ordenar por",
                 state: 0,
                 values: [
-                    { type_name: "SelectOption", name: "Recientes", value: "" },
-                    { type_name: "SelectOption", name: "Populares (Todo)", value: "popular" },
-                    { type_name: "SelectOption", name: "Populares (Hoy)", value: "popular-today" }
+                    { type_name: "SelectOption", name: "Más Recientes", value: "&order=publication_date&order-dir=desc" },
+                    { type_name: "SelectOption", name: "Más Antiguos", value: "&order=publication_date&order-dir=asc" },
+                    { type_name: "SelectOption", name: "Más Populares", value: "&order=popularity&order-dir=desc" },
+                    { type_name: "SelectOption", name: "Menos Populares", value: "&order=popularity&order-dir=asc" },
+                    { type_name: "SelectOption", name: "Más Vistos", value: "&order=view_count&order-dir=desc" },
+                    { type_name: "SelectOption", name: "Alfabético (A-Z)", value: "&order=alphabetic&order-dir=asc" },
+                    { type_name: "SelectOption", name: "Alfabético (Z-A)", value: "&order=alphabetic&order-dir=desc" }
+                ]
+            },
+            {
+                type_name: "SelectFilter",
+                name: "Sección",
+                state: 0,
+                values: [
+                    { type_name: "SelectOption", name: "Hentai", value: "hentai" },
+                    { type_name: "SelectOption", name: "Yaoi", value: "yaoi" },
+                    { type_name: "SelectOption", name: "Yuri", value: "yuri" },
+                    { type_name: "SelectOption", name: "Groups", value: "groups" }
                 ]
             }
         ];
