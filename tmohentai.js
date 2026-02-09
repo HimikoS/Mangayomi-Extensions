@@ -163,5 +163,52 @@ class DefaultExtension extends MProvider {
         return { list: list, hasNextPage: doc.selectFirst("ul.pagination li.active + li") != null };
     }
 
-    getFilterList() { return []; }
+    getFilterList() {
+        return [
+            { type_name: "HeaderFilter", name: "Tags Populares" },
+            {
+                type_name: "SelectFilter",
+                name: "Tags Populares",
+                state: 0,
+                values: [
+                    { type_name: "SelectOption", name: "Ninguno", value: "" },
+                    { type_name: "SelectOption", name: "Big Breasts", value: "big-breasts" },
+                    { type_name: "SelectOption", name: "Anal", value: "anal" },
+                    { type_name: "SelectOption", name: "Yuri", value: "yuri" },
+                    { type_name: "SelectOption", name: "Incest", value: "incest" },
+                    { type_name: "SelectOption", name: "Milf", value: "milf" },
+                    { type_name: "SelectOption", name: "Lolicon", value: "lolicon" },
+                    { type_name: "SelectOption", name: "Shota", value: "shota" },
+                    { type_name: "SelectOption", name: "Blowjob", value: "blowjob" },
+                    { type_name: "SelectOption", name: "Masturbation", value: "masturbation" },
+                    { type_name: "SelectOption", name: "Group Sex", value: "group-sex" }
+                ]
+            },
+            { type_name: "SeparatorFilter" },
+            { type_name: "HeaderFilter", name: "Búsqueda Manual" },
+            { type_name: "TextFilter", name: "Artist", state: "" },
+            { type_name: "TextFilter", name: "Group", state: "" },
+            { type_name: "TextFilter", name: "Tag Manual", state: "" },
+            {
+                type_name: "SelectFilter",
+                name: "Language",
+                state: 0,
+                values: [
+                    { type_name: "SelectOption", name: "Todos", value: "" },
+                    { type_name: "SelectOption", name: "English", value: "english" },
+                    { type_name: "SelectOption", name: "Japanese", value: "japanese" }
+                ]
+            },
+            {
+                type_name: "SelectFilter",
+                name: "Ordenar por",
+                state: 0,
+                values: [
+                    { type_name: "SelectOption", name: "Recientes", value: "" },
+                    { type_name: "SelectOption", name: "Populares (Todo)", value: "popular" },
+                    { type_name: "SelectOption", name: "Populares (Hoy)", value: "popular-today" }
+                ]
+            }
+        ];
+    }
 }

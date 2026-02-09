@@ -1,0 +1,5 @@
+# Ignorar el script de subida automática
+auto_git_push.bat
+
+# Ignorar carpeta temporal
+temp/
