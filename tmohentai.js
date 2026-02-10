@@ -6,7 +6,7 @@ var mangayomiSources = [{
     "typeSource": "single",
     "itemType": 0,
     "isNsfw": true,
-    "version": "1.2.7",
+    "version": "1.2.8",
     "pkgPath": "tmohentai.js"
 }];
 
