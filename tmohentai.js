@@ -126,16 +126,40 @@ class DefaultExtension extends MProvider {
         detail.status = 1;
     
         const chapters = [];
-        const readBtn = doc.selectFirst("a.lanzador, a[href*='/reader/']");
-        if (readBtn) {
-            let chUrl = readBtn.attr("href");
-            if (!chUrl.startsWith("http")) chUrl = this.source.baseUrl + chUrl;
-            
-            let cleanUrl = chUrl.split("/paginated")[0];
-            if (cleanUrl.endsWith("/")) cleanUrl = cleanUrl.slice(0, -1);
-            if (!cleanUrl.endsWith("/cascade")) cleanUrl += "/cascade";
-    
-            chapters.push({ name: "Capítulo Único", url: cleanUrl });
+
+        // 🔥 detectar tabla uploader / grupo
+        const tableRows = doc.select("table.table-hover tbody tr");
+        if (tableRows.length > 0) {
+            // === modo grupo → lista de mangas ===
+            for (const row of tableRows) {
+                const link = row.selectFirst("td a");
+                if (!link) continue;
+
+                let url = link.attr("href");
+                if (!url.startsWith("http")) url = this.source.baseUrl + url;
+
+                chapters.push({
+                    name: link.text.trim(),
+                    url: url
+                });
+            }
+
+        } else {
+            // === modo manga normal ===
+            const readBtn = doc.selectFirst("a.lanzador, a[href*='/reader/']");
+            if (readBtn) {
+                let chUrl = readBtn.attr("href");
+                if (!chUrl.startsWith("http")) chUrl = this.source.baseUrl + chUrl;
+
+                let cleanUrl = chUrl.split("/paginated")[0];
+                if (cleanUrl.endsWith("/")) cleanUrl = cleanUrl.slice(0, -1);
+                if (!cleanUrl.endsWith("/cascade")) cleanUrl += "/cascade";
+
+                chapters.push({
+                    name: "Capítulo Único",
+                    url: cleanUrl
+                });
+            }
         }
         detail.chapters = chapters;
         return detail;
@@ -160,18 +184,65 @@ class DefaultExtension extends MProvider {
 
     mangaListFromPage(html) {
         const doc = new Document(html);
+
+        // 🔥 Detectar si es página de groups
+        const groupCards = doc.select("div.group-banner");
+
+        if (groupCards.length > 0) {
+            return this.groupListFromPage(doc);
+        }
+
+        // === Parser normal de mangas ===
         const elements = doc.select("div.element-thumbnail");
         const list = [];
+
         for (const element of elements) {
             const titleTag = element.selectFirst("div.content-title a");
             const imgTag = element.selectFirst("img.content-thumbnail-cover");
+
             if (titleTag && imgTag) {
                 let link = titleTag.attr("href");
                 if (!link.startsWith("http")) link = this.source.baseUrl + link;
-                list.push({ name: titleTag.text.trim(), imageUrl: imgTag.attr("src"), link: link });
+
+                list.push({
+                    name: titleTag.text.trim(),
+                    imageUrl: imgTag.attr("src"),
+                    link: link
+                });
             }
         }
-        return { list: list, hasNextPage: doc.selectFirst("ul.pagination li.active + li") != null };
+
+        return {
+            list: list,
+            hasNextPage: doc.selectFirst("ul.pagination li.active + li") != null
+        };
+    }
+
+    groupListFromPage(doc) {
+        const cards = doc.select("div.col-xs-12.col-sm-6.col-md-4");
+        const list = [];
+
+        for (const card of cards) {
+            const linkTag = card.selectFirst("a");
+            const nameTag = card.selectFirst(".group-title h5");
+            const logoTag = card.selectFirst("img.group-thumbnail-logo");
+
+            if (!linkTag || !nameTag || !logoTag) continue;
+
+            let link = linkTag.attr("href");
+            if (!link.startsWith("http")) link = this.source.baseUrl + link;
+
+            list.push({
+                name: nameTag.text.trim(),
+                imageUrl: logoTag.attr("src"),
+                link: link
+            });
+        }
+
+        return {
+            list: list,
+            hasNextPage: doc.selectFirst("ul.pagination li.active + li") != null
+        };
     }
 
     getFilterList() {
