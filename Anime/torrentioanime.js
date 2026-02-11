@@ -271,8 +271,21 @@ class DefaultExtension extends MProvider {
         mainURL += url;
         mainURL = mainURL.replace(/\|$/, "");
 
+        console.log("===== Torrentio Request URL =====");
+        console.log(mainURL);
+
         const res = await this.client.get(mainURL);
-        const streams = JSON.parse(res.body).streams || [];
+
+        console.log("===== Raw Response =====");
+        console.log(res.body);
+
+        const data = JSON.parse(res.body);
+        const streams = data.streams || [];
+
+        console.log("===== Streams =====");
+        streams.forEach((s, i) => {
+            console.log(`Stream ${i}:`, s);
+        });
 
         const trackers = [
             "udp://tracker.openbittorrent.com:6969/announce",
@@ -281,11 +294,16 @@ class DefaultExtension extends MProvider {
 
         let videos = this.sortVideos(streams.map(s => {
             const magnet = `magnet:?xt=urn:btih:${s.infoHash}&tr=${trackers.join("&tr=")}&index=${s.fileIdx}`;
-            return {
+
+            const video = {
                 url: magnet,
                 originalUrl: magnet,
                 quality: `${s.name || ""}\n${s.title || ""}`.trim()
             };
+
+            console.log("Video enviado a Dart:", video);
+
+            return video;
         }));
 
         const limit = this.prefs.get("number_of_links");
