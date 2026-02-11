@@ -244,23 +244,49 @@ class DefaultExtension extends MProvider {
             // --- CASO HENTAILA (Hvidserv) ---
             if (videoUrl.includes("hvidserv.com")) {
                 try {
-                    const idMatch = videoUrl.match(/\/play\/([a-f0-9]{32})/i);
+                    console.log("Hvidserv URL: " + videoUrl);
+
+                    let idMatch = videoUrl.match(/\/play\/([a-f0-9]{32})/i);
+
+                    if (!idMatch) {
+                        idMatch = videoUrl.match(/hvidserv\.com\/([a-f0-9]{32})/i);
+                    }
+
                     if (idMatch) {
                         const id = idMatch[1];
                         const m3u8 = `https://cdn.hvidserv.com/m3u8/${id}`;
 
+                        console.log("Hvidserv ID: " + id);
+                        console.log("Hvidserv m3u8: " + m3u8);
+
                         videos.push({
                             url: m3u8,
-                            quality: "HentaiLA (HLS)",
-                            originalUrl: videoUrl
+                            quality: "Vip Hentaila (Hvidserv)",
+                            originalUrl: videoUrl,
+                            headers: {
+                                ":authority": "cdn.hvidserv.com",
+                                "accept-encoding": "identity;q=1, *;q=0",
+                                "Referer": m3u8,
+                                "sec-ch-ua": '"Not(A:Brand";v="8", "Chromium";v="144", "Brave";v="144"',
+                                "sec-ch-ua-platform": '"Windows"',
+                                "sec-fetch-dest": "video",
+                                "sec-fetch-mode": "no-cors",
+                                "sec-fetch-site": "same-origin",
+                                "Origin": "https://hvidserv.com",
+                                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+                            }
                         });
 
                         continue;
                     }
+
+                    console.log("Hvidserv: No se pudo extraer ID");
+
                 } catch (e) {
-                    console.log("Error Hvidserv:", e);
+                    console.log("Error Hvidserv: " + e.toString());
                 }
             }
+
 
             // --- CASO VidHide (ryderjet) ---
             if (videoUrl.includes("ryderjet.com")) {
@@ -412,8 +438,8 @@ class DefaultExtension extends MProvider {
 
         if (match) {
             console.log("Eval encontrado para " + originalUrl);
-            console.log("Longitud eval:", match[0].length);
-            console.log("Final:", match[0].slice(-50));
+            console.log("Longitud eval: " + match[0].length);
+            console.log("Final: " + match[0].slice(-50));
 
             return this.resolverPacker(match[0]);
         }
