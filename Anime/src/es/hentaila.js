@@ -7,7 +7,7 @@ const mangayomiSources = [{
     typeSource: "single",
     itemType: 1,
     isNsfw: true,
-    version: "1.0.5",
+    version: "1.0.6",
     pkgPath: "Anime/src/es/hentaila.js"
 }];
 
@@ -261,19 +261,14 @@ class DefaultExtension extends MProvider {
 
                         videos.push({
                             url: m3u8,
-                            quality: "Vip Hentaila (Hvidserv)",
+                            quality: "Vip Hentaila (HLS)",
                             originalUrl: videoUrl,
                             headers: {
-                                ":authority": "cdn.hvidserv.com",
-                                "accept-encoding": "identity;q=1, *;q=0",
-                                "Referer": m3u8,
-                                "sec-ch-ua": '"Not(A:Brand";v="8", "Chromium";v="144", "Brave";v="144"',
-                                "sec-ch-ua-platform": '"Windows"',
+                                Referer: m3u8,
+                                Origin: "https://hvidserv.com",
+                                "User-Agent": "Mozilla/5.0",
                                 "sec-fetch-dest": "video",
-                                "sec-fetch-mode": "no-cors",
-                                "sec-fetch-site": "same-origin",
-                                "Origin": "https://hvidserv.com",
-                                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+                                "sec-fetch-site": "same-origin"
                             }
                         });
 
