@@ -7,7 +7,7 @@ const mangayomiSources = [{
     typeSource: "single",
     itemType: 1,
     isNsfw: true,
-    version: "1.0.3",
+    version: "1.0.5",
     pkgPath: "Anime/src/es/hentaila.js"
 }];
 
