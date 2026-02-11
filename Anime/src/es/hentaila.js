@@ -3,7 +3,7 @@ const mangayomiSources = [{
     lang: "es",
     baseUrl: "https://hentaila.com",
     apiUrl: "",
-    iconUrl: "https://hentaila.com/img/logo-dark.svg",
+    iconUrl: "https://raw.githubusercontent.com/HimikoS/Mangayomi-Extensions/refs/heads/master/icon/src/es/hentaila.png",
     typeSource: "single",
     itemType: 1,
     isNsfw: true,
@@ -366,13 +366,37 @@ class DefaultExtension extends MProvider {
             const decoded = this.unpack(p, a, c, k);
             if (!decoded) return null;
 
-            const url = decoded.match(/https?:\/\/[^"']+\.m3u8[^"']*/);
+            // 1) Buscar URL absoluta
+            let url = decoded.match(/https?:\/\/[^"']+\.m3u8[^"']*/);
             if (url) return url[0];
 
+            // 2) Buscar ruta relativa
             const rel = decoded.match(/"(\/[^"']+\.m3u8[^"']*)"/);
             if (rel) return "https://ryderjet.com" + rel[1];
 
+            // 3) Fallback: buscar dentro del objeto var n = {...}
+            const objMatch = decoded.match(/var\s+n\s*=\s*(\{[\s\S]*?\});/);
+            if (objMatch) {
+                try {
+                    const data = JSON.parse(objMatch[1]);
+
+                    // posibles nombres que usan los clones
+                    return (
+                        data.hls ||
+                        data.source ||
+                        data.file ||
+                        data["1a"] ||
+                        data["16"] ||
+                        data["1f"] ||
+                        null
+                    );
+                } catch (e) {
+                    console.log("JSON parse error en fallback:", e.message);
+                }
+            }
+
             return null;
+
 
         } catch (e) {
             console.log("Error resolverPacker:", e.message);
