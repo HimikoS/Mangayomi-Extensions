@@ -7,7 +7,7 @@ const mangayomiSources = [{
     typeSource: "single",
     itemType: 1,
     isNsfw: true,
-    version: "1.0.1",
+    version: "1.0.3",
     pkgPath: "Anime/src/es/hentaila.js"
 }];
 
@@ -244,28 +244,22 @@ class DefaultExtension extends MProvider {
             // --- CASO HENTAILA (Hvidserv) ---
             if (videoUrl.includes("hvidserv.com")) {
                 try {
-                    let vRes = await this.client.get(videoUrl);
-                    let vHtml = vRes.body;
+                    const idMatch = videoUrl.match(/\/play\/([a-f0-9]{32})/i);
+                    if (idMatch) {
+                        const id = idMatch[1];
+                        const m3u8 = `https://cdn.hvidserv.com/m3u8/${id}`;
 
-                    const redirMatch = vHtml.match(/window\.location\.href\s*=\s*'([^']+)';/);
-                    if (redirMatch) {
-                        vRes = await this.client.get(redirMatch[1]);
-                        vHtml = vRes.body;
-                    }
+                        videos.push({
+                            url: m3u8,
+                            quality: "HentaiLA (HLS)",
+                            originalUrl: videoUrl
+                        });
 
-                    const encodedMatch = vHtml.match(/<script type="application\/json">[\s\S]*?\[\s*"([^"]+)"\s*\][\s\S]*?<\/script>/);
-                    
-                    if (encodedMatch) {
-                        const decrypted = this.decryptVoeF7(encodedMatch[1]);
-                        if (decrypted) {
-                            const m3u8 = decrypted["source"];
-                            const mp4 = decrypted["direct_access_url"];
-                            if (m3u8) videos.push({ url: m3u8, quality: "Vip HentaiLA (HLS)", originalUrl: videoUrl });
-                            if (mp4) videos.push({ url: mp4, quality: "Vip HentaiLA (MP4)", originalUrl: videoUrl });
-                            if (m3u8 || mp4) continue;
-                        }
+                        continue;
                     }
-                } catch (e) {}
+                } catch (e) {
+                    console.log("Error Hvidserv:", e);
+                }
             }
 
             // --- CASO VidHide (ryderjet) ---
