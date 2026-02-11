@@ -442,4 +442,57 @@ class DefaultExtension extends MProvider {
             return score(b) - score(a);
         });
     }
+
+    getSourcePreferences() {
+        return [
+            {
+                key: "preferred_quality",
+                listPreference: {
+                    title: "Preferred quality",
+                    summary: "",
+                    valueIndex: 0,
+                    entries: [
+                        "Auto",
+                        "1080p",
+                        "720p",
+                        "480p",
+                        "360p"
+                    ],
+                    entryValues: [
+                        "",
+                        "1080",
+                        "720",
+                        "480",
+                        "360"
+                    ]
+                }
+            },
+            {
+                key: "preferred_server",
+                listPreference: {
+                    title: "Preferred server",
+                    summary: "",
+                    valueIndex: 0,
+                    entries: [
+                        "Auto",
+                        "Vip HentaiLA",
+                        "Voe",
+                        "VidHide",
+                        "YourUpload",
+                        "MP4Upload",
+                        "Mega"
+                    ],
+                    entryValues: [
+                        "",
+                        "Vip HentaiLA",
+                        "Voe",
+                        "VidHide",
+                        "YourUpload",
+                        "MP4Upload",
+                        "Mega"
+                    ]
+                }
+            }
+        ];
+    }
 }
