@@ -7,7 +7,7 @@ const mangayomiSources = [{
     typeSource: "single",
     itemType: 1,
     isNsfw: true,
-    version: "1.0.6",
+    version: "1.1.0",
     pkgPath: "Anime/src/es/hentaila.js"
 }];
 
@@ -53,17 +53,57 @@ class DefaultExtension extends MProvider {
     // ======================
 
     async getPopular(page) {
-        const doc = await this.fetchPage(this.getBrowseUrl(page));
+        const url = `${this.getBaseUrl()}/catalogo?order=popular&page=${page}`;
+        const doc = await this.fetchPage(url);
         return doc ? this.parseAnimeList(doc) : { list: [], hasNextPage: false };
     }
 
     async getLatestUpdates(page) {
-        const doc = await this.fetchPage(this.getBrowseUrl(page));
+        const url = `${this.getBaseUrl()}/catalogo?order=latest_added&page=${page}`;
+        const doc = await this.fetchPage(url);
         return doc ? this.parseAnimeList(doc) : { list: [], hasNextPage: false };
     }
 
-    async search(query, page) {
-        const doc = await this.fetchPage(this.getBrowseUrl(page, query));
+    async search(query, page, filters) {
+        let url = `${this.getBaseUrl()}/catalogo?page=${page}`;
+
+        if (query) {
+            url += `&q=${encodeURIComponent(query)}`;
+        }
+
+        if (filters) {
+            for (const filter of filters) {
+                if (filter.state === null || filter.state === undefined || filter.state === 0 || filter.state === "") continue;
+
+                switch (filter.name) {
+                    case "Desde":
+                        url += `&minYear=${filter.values[filter.state].value}`;
+                        break;
+                    case "Hasta":
+                        url += `&maxYear=${filter.values[filter.state].value}`;
+                        break;
+                    case "Genero":
+                        url += `&genre=${filter.values[filter.state].value}`;
+                        break;
+                    case "solo por Letra Inicial":
+                        url += `&letter=${filter.values[filter.state].value}`;
+                        break;
+                    case "Ordenar por":
+                        url += `&order=${filter.values[filter.state].value}`;
+                        break;
+                    case "Estado":
+                        url += `&status=${filter.values[filter.state].value}`;
+                        break;
+                    case "Sin Censura":
+                        if (filter.state === true) {
+                            url += `&uncensored=`;
+                        }
+                        break;
+                }
+            }
+        }
+
+        const doc = await this.fetchPage(url);
         return doc ? this.parseAnimeList(doc) : { list: [], hasNextPage: false };
     }
 
@@ -192,7 +232,7 @@ class DefaultExtension extends MProvider {
             "JKVoe": /https?:\/\/jkanime\.net\/jkplayer\/c1\?u=[a-zA-Z0-9+/=]+&s=voe/g,
             "MP4Upload": /https?:\/\/(?:www\.)?mp4upload\.com\/embed-[\w-.]+/g,
             "Mega": /https?:\/\/mega\.nz\/embed[!#][\w-]+/g,
-            "Netu": /https?:\/\/(?:hqq\.ac|netu\.tv)\/e\/[^\s"\'<>]+/g,
+            // "Netu": /https?:\/\/(?:hqq\.ac|netu\.tv)\/e\/[^\s"\'<>]+/g,
             "VidHide": /https?:\/\/(?:cdn\.)?ryderjet\.com\/[^\s"\'<>]+/g
         };
 
@@ -309,6 +349,149 @@ class DefaultExtension extends MProvider {
                 }
             }
 
+            // // --- CASO Netu (HQQ) - REPLICACIÓN SEGÚN CAPTURA DE RED (FIX 0.00) ---
+            // if (videoUrl.includes("hqq.ac") || videoUrl.includes("hqq.tv")) {
+            //     try {
+            //         console.log("HQQ: Iniciando proceso de activación...");
+            //         const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+            //         // 1. Headers "Espejo" del navegador
+            //         const browserHeaders = {
+            //             "Accept": "application/json, text/javascript, */*; q=0.01",
+            //             "Accept-Language": "es-419,es;q=0.7",
+            //             "Cache-Control": "no-cache",
+            //             "Pragma": "no-cache",
+            //             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
+            //             "X-Requested-With": "XMLHttpRequest",
+            //             "Origin": "https://hqq.ac",
+            //             "Referer": videoUrl, // La URL /e/L0xre...
+            //             "sec-ch-ua": '"Not(A:Brand";v="8", "Chromium";v="144", "Brave";v="144"',
+            //             "sec-ch-ua-mobile": "?0",
+            //             "sec-ch-ua-platform": '"Windows"',
+            //             "sec-gpc": "1",
+            //             "Sec-Fetch-Dest": "empty",
+            //             "Sec-Fetch-Mode": "cors",
+            //             "Sec-Fetch-Site": "same-origin"
+            //         };
+
+            //         // PASO 1: Cargar la página inicial
+            //         const resPage = await this.client.get(videoUrl, { 
+            //             headers: { ...browserHeaders, "Accept": "text/html" } 
+            //         });
+            //         const html = resPage.body;
+
+            //         // EXTRAER VARIABLES
+            //         const videoid = (html.match(/videoid['"]?\s*[:=]\s*['"](\d+)['"]/i) || [])[1];
+            //         const internalKey = (html.match(/videokey['"]?\s*[:=]\s*['"]([^"']+)["']/) || [])[1];
+            //         const userId = (html.match(/userid\s*=\s*["'](\d+)["']/i) || ["", "108451"])[1];
+
+            //         // EXTRAER SH (El ID del div en el embed_code)
+            //         let secretSh = "";
+            //         const embedMatch = html.match(/embed_code\s*=\s*["']([^"']+)["']/);
+            //         if (embedMatch) {
+            //             const decodedEmbed = decodeURIComponent(embedMatch[1].replace(/\+/g, " "));
+            //             const idMatch = decodedEmbed.match(/id=["']([^"']+)["']/i);
+            //             secretSh = idMatch ? idMatch[1] : "";
+            //         }
+
+            //         if (!videoid || !internalKey) return;
+
+            //         console.log(`HQQ Validado -> ID: ${videoid}, RealKey: ${internalKey}, SH: ${secretSh}`);
+
+            //         // --- PASO CLAVE: CALENTAMIENTO DE IP ---
+            //         // Esto vincula nuestra IP con las cookies generadas en el paso 1
+            //         await this.client.get("https://hqq.ac/player/ip.php", { headers: browserHeaders }).catch(() => {});
+
+            //         // --- PASO 2: ACTIVACIÓN (get_player_image.php) ---
+            //         // Forzamos JSON y nos aseguramos de que no se envíe como text/plain
+            //         const resImg = await this.client.post("https://hqq.ac/player/get_player_image.php", {
+            //             headers: browserHeaders,
+            //             json: { // Usar la propiedad 'json' del cliente suele forzar el content-type correcto
+            //                 videoid: videoid,
+            //                 videokey: internalKey,
+            //                 width: 1920,
+            //                 height: 1080
+            //             },
+            //             responseType: 'json'
+            //         });
+
+            //         let dataImg = resImg.body;
+            //         // Si el cliente no parseó el JSON automáticamente:
+            //         if (typeof dataImg === 'string') {
+            //             if (dataImg.includes("0.00") || dataImg === "0.00") {
+            //                 console.log("HQQ Error: El servidor devolvió 0.00 (El servidor detectó el bot)");
+            //                 //return;
+            //             }
+            //             try { dataImg = JSON.parse(dataImg); } catch(e) {}
+            //         }
+
+            //         const clickHash = dataImg.hash_image;
+            //         const waitSec = (dataImg.isec ? parseInt(dataImg.isec) : 5);
+
+            //         if (!clickHash) {
+            //             console.log("HQQ Error: No se obtuvo click_hash. Respuesta: " + JSON.stringify(dataImg));
+            //             //return;
+            //         }
+
+            //         console.log(`HQQ: Hash obtenido. Esperando ${waitSec}s...`);
+            //         await sleep((waitSec + 1) * 1000);
+
+            //         // --- PASO 3: OBTENER EL MD5 (Link firmado) ---
+            //         const apiRes = await this.client.post("https://hqq.ac/player/get_md5.php", {
+            //             headers: { 
+            //                 ...browserHeaders, 
+            //                 "Content-Type": "application/json" 
+            //             },
+            //             json: {
+            //                 htoken: "",
+            //                 sh: secretSh,
+            //                 ver: "4",
+            //                 secure: "0",
+            //                 adb: userId,
+            //                 v: internalKey,
+            //                 token: "",
+            //                 gt: "",
+            //                 embed_from: "0",
+            //                 wasmcheck: 2,
+            //                 adscore: "",
+            //                 click_hash: clickHash,
+            //                 clickx: Math.floor(Math.random() * 50) + 200,
+            //                 clicky: Math.floor(Math.random() * 50) + 250
+            //             }
+            //         });
+
+            //         let finalData = apiRes.body;
+            //         if (typeof finalData !== 'string') finalData = JSON.stringify(finalData);
+
+            //         // Decodificar Base64 (atob) y parsear URL
+            //         if (finalData.includes('atob("')) {
+            //             const b64 = finalData.match(/atob\("([^"]+)"\)/)[1];
+            //             finalData = Buffer.from(b64, 'base64').toString();
+            //         }
+
+            //         if (finalData.startsWith("{")) {
+            //             const json = JSON.parse(finalData);
+            //             let signedUrl = json.file || json.url || json.obf_link;
+
+            //             if (signedUrl) {
+            //                 if (signedUrl.startsWith("//")) signedUrl = "https:" + signedUrl;
+            //                 console.log("¡ÉXITO! URL Encontrada: " + signedUrl);
+            //                 videos.push({
+            //                     url: signedUrl,
+            //                     quality: "Netu (Signed HLS)",
+            //                     originalUrl: videoUrl,
+            //                     headers: { "Referer": "https://hqq.ac/", "User-Agent": browserHeaders["User-Agent"] }
+            //                 });
+            //             }
+            //         } else {
+            //             console.log("HQQ Error: Respuesta final no es JSON -> " + finalData);
+            //         }
+
+            //     } catch (e) {
+            //         console.log("Error detallado en HQQ: " + e.message);
+            //     }
+            // }
+
             // --- FALLBACK (Extractores de la App) ---
             try {
                 const extracted = await this.extractFromUrl(videoUrl);
@@ -319,7 +502,6 @@ class DefaultExtension extends MProvider {
                     if (videoUrl.includes("mega")) label = "Mega";
                     else if (videoUrl.includes("yourupload")) label = "YourUpload";
                     else if (videoUrl.includes("mp4upload")) label = "MP4Upload";
-                    else if (videoUrl.includes("hqq.ac")) label = "Netu";
                     
                     videos.push({ url: videoUrl, quality: label + " (Embed)", originalUrl: videoUrl });
                 }
@@ -507,6 +689,217 @@ class DefaultExtension extends MProvider {
                         "Mega"
                     ]
                 }
+            }
+        ];
+    }
+
+    getFilterList() {
+        return [
+            { type_name: "TextFilter", name: "Buscar Hentai", state: "" },
+            {
+                type_name: "SelectFilter",
+                name: "Desde",
+                state: 0,
+                values: [
+                    { type_name: "SelectOption", name: "Seleccionar", value: "" },
+                    { type_name: "SelectOption", name: "1990", value: "1990" },
+                    { type_name: "SelectOption", name: "1991", value: "1991" },
+                    { type_name: "SelectOption", name: "1992", value: "1992" },
+                    { type_name: "SelectOption", name: "1993", value: "1993" },
+                    { type_name: "SelectOption", name: "1994", value: "1994" },
+                    { type_name: "SelectOption", name: "1995", value: "1995" },
+                    { type_name: "SelectOption", name: "1996", value: "1996" },
+                    { type_name: "SelectOption", name: "1997", value: "1997" },
+                    { type_name: "SelectOption", name: "1998", value: "1998" },
+                    { type_name: "SelectOption", name: "1999", value: "1999" },
+                    { type_name: "SelectOption", name: "2000", value: "2000" },
+                    { type_name: "SelectOption", name: "2001", value: "2001" },
+                    { type_name: "SelectOption", name: "2002", value: "2002" },
+                    { type_name: "SelectOption", name: "2003", value: "2003" },
+                    { type_name: "SelectOption", name: "2004", value: "2004" },
+                    { type_name: "SelectOption", name: "2005", value: "2005" },
+                    { type_name: "SelectOption", name: "2006", value: "2006" },
+                    { type_name: "SelectOption", name: "2007", value: "2007" },
+                    { type_name: "SelectOption", name: "2008", value: "2008" },
+                    { type_name: "SelectOption", name: "2009", value: "2009" },
+                    { type_name: "SelectOption", name: "2010", value: "2010" },
+                    { type_name: "SelectOption", name: "2011", value: "2011" },
+                    { type_name: "SelectOption", name: "2012", value: "2012" },
+                    { type_name: "SelectOption", name: "2013", value: "2013" },
+                    { type_name: "SelectOption", name: "2014", value: "2014" },
+                    { type_name: "SelectOption", name: "2015", value: "2015" },
+                    { type_name: "SelectOption", name: "2016", value: "2016" },
+                    { type_name: "SelectOption", name: "2017", value: "2017" },
+                    { type_name: "SelectOption", name: "2018", value: "2018" },
+                    { type_name: "SelectOption", name: "2019", value: "2019" },
+                    { type_name: "SelectOption", name: "2020", value: "2020" },
+                    { type_name: "SelectOption", name: "2021", value: "2021" },
+                    { type_name: "SelectOption", name: "2022", value: "2022" },
+                    { type_name: "SelectOption", name: "2023", value: "2023" },
+                    { type_name: "SelectOption", name: "2024", value: "2024" },
+                    { type_name: "SelectOption", name: "2025", value: "2025" },
+                    { type_name: "SelectOption", name: "2026", value: "2026" }
+                ]
+            },
+            {
+                type_name: "SelectFilter",
+                name: "Hasta",
+                state: 0,
+                values: [
+                    { type_name: "SelectOption", name: "Seleccionar", value: "" },
+                    { type_name: "SelectOption", name: "1990", value: "1990" },
+                    { type_name: "SelectOption", name: "1991", value: "1991" },
+                    { type_name: "SelectOption", name: "1992", value: "1992" },
+                    { type_name: "SelectOption", name: "1993", value: "1993" },
+                    { type_name: "SelectOption", name: "1994", value: "1994" },
+                    { type_name: "SelectOption", name: "1995", value: "1995" },
+                    { type_name: "SelectOption", name: "1996", value: "1996" },
+                    { type_name: "SelectOption", name: "1997", value: "1997" },
+                    { type_name: "SelectOption", name: "1998", value: "1998" },
+                    { type_name: "SelectOption", name: "1999", value: "1999" },
+                    { type_name: "SelectOption", name: "2000", value: "2000" },
+                    { type_name: "SelectOption", name: "2001", value: "2001" },
+                    { type_name: "SelectOption", name: "2002", value: "2002" },
+                    { type_name: "SelectOption", name: "2003", value: "2003" },
+                    { type_name: "SelectOption", name: "2004", value: "2004" },
+                    { type_name: "SelectOption", name: "2005", value: "2005" },
+                    { type_name: "SelectOption", name: "2006", value: "2006" },
+                    { type_name: "SelectOption", name: "2007", value: "2007" },
+                    { type_name: "SelectOption", name: "2008", value: "2008" },
+                    { type_name: "SelectOption", name: "2009", value: "2009" },
+                    { type_name: "SelectOption", name: "2010", value: "2010" },
+                    { type_name: "SelectOption", name: "2011", value: "2011" },
+                    { type_name: "SelectOption", name: "2012", value: "2012" },
+                    { type_name: "SelectOption", name: "2013", value: "2013" },
+                    { type_name: "SelectOption", name: "2014", value: "2014" },
+                    { type_name: "SelectOption", name: "2015", value: "2015" },
+                    { type_name: "SelectOption", name: "2016", value: "2016" },
+                    { type_name: "SelectOption", name: "2017", value: "2017" },
+                    { type_name: "SelectOption", name: "2018", value: "2018" },
+                    { type_name: "SelectOption", name: "2019", value: "2019" },
+                    { type_name: "SelectOption", name: "2020", value: "2020" },
+                    { type_name: "SelectOption", name: "2021", value: "2021" },
+                    { type_name: "SelectOption", name: "2022", value: "2022" },
+                    { type_name: "SelectOption", name: "2023", value: "2023" },
+                    { type_name: "SelectOption", name: "2024", value: "2024" },
+                    { type_name: "SelectOption", name: "2025", value: "2025" },
+                    { type_name: "SelectOption", name: "2026", value: "2026" }
+                ]
+            },
+            { type_name: "SeparatorFilter" },
+            {
+                type_name: "SelectFilter",
+                name: "solo por Letra Inicial",
+                state: 0,
+                values: [
+                    { type_name: "SelectOption", name: "Seleccionar", value: "" },
+                    { type_name: "SelectOption", name: "#", value: "0" },
+                    { type_name: "SelectOption", name: "A", value: "A" },
+                    { type_name: "SelectOption", name: "B", value: "B" },
+                    { type_name: "SelectOption", name: "C", value: "C" },
+                    { type_name: "SelectOption", name: "D", value: "D" },
+                    { type_name: "SelectOption", name: "E", value: "E" },
+                    { type_name: "SelectOption", name: "F", value: "F" },
+                    { type_name: "SelectOption", name: "G", value: "G" },
+                    { type_name: "SelectOption", name: "H", value: "H" },
+                    { type_name: "SelectOption", name: "I", value: "I" },
+                    { type_name: "SelectOption", name: "J", value: "J" },
+                    { type_name: "SelectOption", name: "K", value: "K" },
+                    { type_name: "SelectOption", name: "L", value: "L" },
+                    { type_name: "SelectOption", name: "M", value: "M" },
+                    { type_name: "SelectOption", name: "N", value: "N" },
+                    { type_name: "SelectOption", name: "O", value: "O" },
+                    { type_name: "SelectOption", name: "P", value: "P" },
+                    { type_name: "SelectOption", name: "Q", value: "Q" },
+                    { type_name: "SelectOption", name: "R", value: "R" },
+                    { type_name: "SelectOption", name: "S", value: "S" },
+                    { type_name: "SelectOption", name: "T", value: "T" },
+                    { type_name: "SelectOption", name: "U", value: "U" },
+                    { type_name: "SelectOption", name: "V", value: "V" },
+                    { type_name: "SelectOption", name: "W", value: "W" },
+                    { type_name: "SelectOption", name: "X", value: "X" },
+                    { type_name: "SelectOption", name: "Y", value: "Y" },
+                    { type_name: "SelectOption", name: "Z", value: "Z" }
+                ]
+            },
+            { type_name: "SeparatorFilter" },
+            {
+                type_name: "SelectFilter",
+                name: "Genero",
+                state: 0,
+                values: [
+                    { type_name: "SelectOption", name: "Seleccionar", value: "" },
+                    { type_name: "SelectOption", name: "3D", value: "3d" },
+                    { type_name: "SelectOption", name: "Ahegao", value: "ahegao" },
+                    { type_name: "SelectOption", name: "Anal", value: "anal" },
+                    { type_name: "SelectOption", name: "Casadas", value: "casadas" },
+                    { type_name: "SelectOption", name: "Chikan", value: "chikan" },
+                    { type_name: "SelectOption", name: "Ecchi", value: "ecchi" },
+                    { type_name: "SelectOption", name: "Enfermeras", value: "enfermeras" },
+                    { type_name: "SelectOption", name: "Escolares", value: "escolares" },
+                    { type_name: "SelectOption", name: "Futanari", value: "futanari" },
+                    { type_name: "SelectOption", name: "Gore", value: "gore" },
+                    { type_name: "SelectOption", name: "Hardcore", value: "hardcore" },
+                    { type_name: "SelectOption", name: "Harem", value: "harem" },
+                    { type_name: "SelectOption", name: "Incesto", value: "incesto" },
+                    { type_name: "SelectOption", name: "Juegos Sexuales", value: "juegos-sexuales" },
+                    { type_name: "SelectOption", name: "Suspenso", value: "suspenso" },
+                    { type_name: "SelectOption", name: "Milfs", value: "milfs" },
+                    { type_name: "SelectOption", name: "Maids", value: "maids" },
+                    { type_name: "SelectOption", name: "Netorare", value: "netorare" },
+                    { type_name: "SelectOption", name: "Ninfomania", value: "ninfomania" },
+                    { type_name: "SelectOption", name: "Ninjas", value: "ninjas" },
+                    { type_name: "SelectOption", name: "Orgias", value: "orgias" },
+                    { type_name: "SelectOption", name: "Romance", value: "romance" },
+                    { type_name: "SelectOption", name: "Shota", value: "shota" },
+                    { type_name: "SelectOption", name: "Softcore", value: "softcore" },
+                    { type_name: "SelectOption", name: "Succubus", value: "succubus" },
+                    { type_name: "SelectOption", name: "Teacher", value: "teacher" },
+                    { type_name: "SelectOption", name: "Tentaculos", value: "tentaculos" },
+                    { type_name: "SelectOption", name: "Tetonas", value: "tetonas" },
+                    { type_name: "SelectOption", name: "Vanilla", value: "vanilla" },
+                    { type_name: "SelectOption", name: "Violacion", value: "violacion" },
+                    { type_name: "SelectOption", name: "Virgenes", value: "virgenes" },
+                    { type_name: "SelectOption", name: "Yaoi", value: "yaoi" },
+                    { type_name: "SelectOption", name: "Yuri", value: "yuri" },
+                    { type_name: "SelectOption", name: "Bondage", value: "bondage" },
+                    { type_name: "SelectOption", name: "Elfas", value: "elfas" },
+                    { type_name: "SelectOption", name: "Petit", value: "petit" },
+                    { type_name: "SelectOption", name: "Threesome", value: "threesome" },
+                    { type_name: "SelectOption", name: "Paizuri", value: "paizuri" },
+                    { type_name: "SelectOption", name: "Gal", value: "gal" },
+                    { type_name: "SelectOption", name: "Oyakodon", value: "oyakodon" }
+                ]
+            },
+            {
+                type_name: "SelectFilter",
+                name: "Ordenar por",
+                state: 0,
+                values: [
+                    { type_name: "SelectOption", name: "Predeterminado", value: "" },
+                    { type_name: "SelectOption", name: "Puntuación", value: "score" },
+                    { type_name: "SelectOption", name: "Populares", value: "popular" },
+                    { type_name: "SelectOption", name: "Titulo", value: "title" },
+                    { type_name: "SelectOption", name: "Últimos Agregados", value: "latest_added" },
+                    { type_name: "SelectOption", name: "Últiumos Estrenos", value: "latest_released" }
+                ]
+            },
+            {
+                type_name: "SelectFilter",
+                name: "Estado",
+                state: 0,
+                values: [
+                    { type_name: "SelectOption", name: "Seleccionar", value: "" },
+                    { type_name: "SelectOption", name: "Finalizado", value: "finalizado" },
+                    { type_name: "SelectOption", name: "Próximamente", value: "proximamente" },
+                    { type_name: "SelectOption", name: "En emisión", value: "emision" }
+                ]
+            },
+            {
+                type_name: "CheckBox",
+                type: "SinCensura",
+                name: "Sin Censura",
+                value: "",
             }
         ];
     }
