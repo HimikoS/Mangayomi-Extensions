@@ -42,5 +42,27 @@
     "additionalParams": "",
     "sourceCodeLanguage": 1,
     "notes": ""
+  },
+  {
+    "name": "XVideos",
+    "id": 715754011,
+    "baseUrl": "https://www.xvideos.com",
+    "lang": "all",
+    "typeSource": "single",
+    "iconUrl": "https://raw.githubusercontent.com/HimikoS/Mangayomi-Extensions/refs/heads/master/icon/src/all/xvideos.webp",
+    "dateFormat": "",
+    "dateFormatLocale": "",
+    "isNsfw": true,
+    "hasCloudflare": false,
+    "sourceCodeUrl": "https://raw.githubusercontent.com/HimikoS/Mangayomi-Extensions/refs/heads/master/Anime/src/all/xvideos.js",
+    "apiUrl": "",
+    "version": "1.0.0",
+    "isManga": false,
+    "itemType": 1,
+    "isFullData": false,
+    "appMinVerReq": "0.5.0",
+    "additionalParams": "",
+    "sourceCodeLanguage": 1,
+    "notes": ""
   }
 ]
