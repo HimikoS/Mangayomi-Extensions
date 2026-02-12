@@ -67,15 +67,23 @@ class DefaultExtension extends MProvider {
     async search(query, page, filters) {
         let url = `${this.getBaseUrl()}/catalogo?page=${page}`;
 
-        if (query) {
-            url += `&q=${encodeURIComponent(query)}`;
+        // Prioridad 1: Barra de búsqueda principal de Mangayomi
+        if (query && query.trim() !== "") {
+            url += `&search=${encodeURIComponent(query.trim())}`;
         }
 
         if (filters) {
             for (const filter of filters) {
-                if (filter.state === null || filter.state === undefined || filter.state === 0 || filter.state === "") continue;
+                // Saltamos filtros vacíos o por defecto
+                if (filter.state === null || filter.state === undefined || filter.state === "" || filter.state === 0) continue;
 
                 switch (filter.name) {
+                    case "Buscar Hentai":
+                        // Prioridad 2: Filtro de texto manual (si la barra principal está vacía)
+                        if (!url.includes("&search=")) {
+                            url += `&search=${encodeURIComponent(filter.state)}`;
+                        }
+                        break;
                     case "Desde":
                         url += `&minYear=${filter.values[filter.state].value}`;
                         break;
@@ -102,6 +110,9 @@ class DefaultExtension extends MProvider {
                 }
             }
         }
+
+        // Debug para consola de Mangayomi
+        console.log("URL de búsqueda final: " + url);
 
         const doc = await this.fetchPage(url);
         return doc ? this.parseAnimeList(doc) : { list: [], hasNextPage: false };
@@ -700,91 +711,13 @@ class DefaultExtension extends MProvider {
                 type_name: "SelectFilter",
                 name: "Desde",
                 state: 0,
-                values: [
-                    { type_name: "SelectOption", name: "Seleccionar", value: "" },
-                    { type_name: "SelectOption", name: "1990", value: "1990" },
-                    { type_name: "SelectOption", name: "1991", value: "1991" },
-                    { type_name: "SelectOption", name: "1992", value: "1992" },
-                    { type_name: "SelectOption", name: "1993", value: "1993" },
-                    { type_name: "SelectOption", name: "1994", value: "1994" },
-                    { type_name: "SelectOption", name: "1995", value: "1995" },
-                    { type_name: "SelectOption", name: "1996", value: "1996" },
-                    { type_name: "SelectOption", name: "1997", value: "1997" },
-                    { type_name: "SelectOption", name: "1998", value: "1998" },
-                    { type_name: "SelectOption", name: "1999", value: "1999" },
-                    { type_name: "SelectOption", name: "2000", value: "2000" },
-                    { type_name: "SelectOption", name: "2001", value: "2001" },
-                    { type_name: "SelectOption", name: "2002", value: "2002" },
-                    { type_name: "SelectOption", name: "2003", value: "2003" },
-                    { type_name: "SelectOption", name: "2004", value: "2004" },
-                    { type_name: "SelectOption", name: "2005", value: "2005" },
-                    { type_name: "SelectOption", name: "2006", value: "2006" },
-                    { type_name: "SelectOption", name: "2007", value: "2007" },
-                    { type_name: "SelectOption", name: "2008", value: "2008" },
-                    { type_name: "SelectOption", name: "2009", value: "2009" },
-                    { type_name: "SelectOption", name: "2010", value: "2010" },
-                    { type_name: "SelectOption", name: "2011", value: "2011" },
-                    { type_name: "SelectOption", name: "2012", value: "2012" },
-                    { type_name: "SelectOption", name: "2013", value: "2013" },
-                    { type_name: "SelectOption", name: "2014", value: "2014" },
-                    { type_name: "SelectOption", name: "2015", value: "2015" },
-                    { type_name: "SelectOption", name: "2016", value: "2016" },
-                    { type_name: "SelectOption", name: "2017", value: "2017" },
-                    { type_name: "SelectOption", name: "2018", value: "2018" },
-                    { type_name: "SelectOption", name: "2019", value: "2019" },
-                    { type_name: "SelectOption", name: "2020", value: "2020" },
-                    { type_name: "SelectOption", name: "2021", value: "2021" },
-                    { type_name: "SelectOption", name: "2022", value: "2022" },
-                    { type_name: "SelectOption", name: "2023", value: "2023" },
-                    { type_name: "SelectOption", name: "2024", value: "2024" },
-                    { type_name: "SelectOption", name: "2025", value: "2025" },
-                    { type_name: "SelectOption", name: "2026", value: "2026" }
-                ]
+                values: this.generateYearOptions()
             },
             {
                 type_name: "SelectFilter",
                 name: "Hasta",
                 state: 0,
-                values: [
-                    { type_name: "SelectOption", name: "Seleccionar", value: "" },
-                    { type_name: "SelectOption", name: "1990", value: "1990" },
-                    { type_name: "SelectOption", name: "1991", value: "1991" },
-                    { type_name: "SelectOption", name: "1992", value: "1992" },
-                    { type_name: "SelectOption", name: "1993", value: "1993" },
-                    { type_name: "SelectOption", name: "1994", value: "1994" },
-                    { type_name: "SelectOption", name: "1995", value: "1995" },
-                    { type_name: "SelectOption", name: "1996", value: "1996" },
-                    { type_name: "SelectOption", name: "1997", value: "1997" },
-                    { type_name: "SelectOption", name: "1998", value: "1998" },
-                    { type_name: "SelectOption", name: "1999", value: "1999" },
-                    { type_name: "SelectOption", name: "2000", value: "2000" },
-                    { type_name: "SelectOption", name: "2001", value: "2001" },
-                    { type_name: "SelectOption", name: "2002", value: "2002" },
-                    { type_name: "SelectOption", name: "2003", value: "2003" },
-                    { type_name: "SelectOption", name: "2004", value: "2004" },
-                    { type_name: "SelectOption", name: "2005", value: "2005" },
-                    { type_name: "SelectOption", name: "2006", value: "2006" },
-                    { type_name: "SelectOption", name: "2007", value: "2007" },
-                    { type_name: "SelectOption", name: "2008", value: "2008" },
-                    { type_name: "SelectOption", name: "2009", value: "2009" },
-                    { type_name: "SelectOption", name: "2010", value: "2010" },
-                    { type_name: "SelectOption", name: "2011", value: "2011" },
-                    { type_name: "SelectOption", name: "2012", value: "2012" },
-                    { type_name: "SelectOption", name: "2013", value: "2013" },
-                    { type_name: "SelectOption", name: "2014", value: "2014" },
-                    { type_name: "SelectOption", name: "2015", value: "2015" },
-                    { type_name: "SelectOption", name: "2016", value: "2016" },
-                    { type_name: "SelectOption", name: "2017", value: "2017" },
-                    { type_name: "SelectOption", name: "2018", value: "2018" },
-                    { type_name: "SelectOption", name: "2019", value: "2019" },
-                    { type_name: "SelectOption", name: "2020", value: "2020" },
-                    { type_name: "SelectOption", name: "2021", value: "2021" },
-                    { type_name: "SelectOption", name: "2022", value: "2022" },
-                    { type_name: "SelectOption", name: "2023", value: "2023" },
-                    { type_name: "SelectOption", name: "2024", value: "2024" },
-                    { type_name: "SelectOption", name: "2025", value: "2025" },
-                    { type_name: "SelectOption", name: "2026", value: "2026" }
-                ]
+                values: this.generateYearOptions()
             },
             { type_name: "SeparatorFilter" },
             {
@@ -794,32 +727,7 @@ class DefaultExtension extends MProvider {
                 values: [
                     { type_name: "SelectOption", name: "Seleccionar", value: "" },
                     { type_name: "SelectOption", name: "#", value: "0" },
-                    { type_name: "SelectOption", name: "A", value: "A" },
-                    { type_name: "SelectOption", name: "B", value: "B" },
-                    { type_name: "SelectOption", name: "C", value: "C" },
-                    { type_name: "SelectOption", name: "D", value: "D" },
-                    { type_name: "SelectOption", name: "E", value: "E" },
-                    { type_name: "SelectOption", name: "F", value: "F" },
-                    { type_name: "SelectOption", name: "G", value: "G" },
-                    { type_name: "SelectOption", name: "H", value: "H" },
-                    { type_name: "SelectOption", name: "I", value: "I" },
-                    { type_name: "SelectOption", name: "J", value: "J" },
-                    { type_name: "SelectOption", name: "K", value: "K" },
-                    { type_name: "SelectOption", name: "L", value: "L" },
-                    { type_name: "SelectOption", name: "M", value: "M" },
-                    { type_name: "SelectOption", name: "N", value: "N" },
-                    { type_name: "SelectOption", name: "O", value: "O" },
-                    { type_name: "SelectOption", name: "P", value: "P" },
-                    { type_name: "SelectOption", name: "Q", value: "Q" },
-                    { type_name: "SelectOption", name: "R", value: "R" },
-                    { type_name: "SelectOption", name: "S", value: "S" },
-                    { type_name: "SelectOption", name: "T", value: "T" },
-                    { type_name: "SelectOption", name: "U", value: "U" },
-                    { type_name: "SelectOption", name: "V", value: "V" },
-                    { type_name: "SelectOption", name: "W", value: "W" },
-                    { type_name: "SelectOption", name: "X", value: "X" },
-                    { type_name: "SelectOption", name: "Y", value: "Y" },
-                    { type_name: "SelectOption", name: "Z", value: "Z" }
+                    ..."ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map(l => ({ type_name: "SelectOption", name: l, value: l })),
                 ]
             },
             { type_name: "SeparatorFilter" },
@@ -902,5 +810,13 @@ class DefaultExtension extends MProvider {
                 value: "",
             }
         ];
+    }
+
+    generateYearOptions() {
+        const years = [{ type_name: "SelectOption", name: "Seleccionar", value: "" }];
+        for (let i = 1990; i <= 2026; i++) {
+            years.push({ type_name: "SelectOption", name: i.toString(), value: i.toString() });
+        }
+        return years;
     }
 }
