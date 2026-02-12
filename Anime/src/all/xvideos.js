@@ -3,7 +3,7 @@ const mangayomiSources = [{
     lang: "all",
     baseUrl: "https://www.xvideos.com",
     apiUrl: "",
-    iconUrl: "https://raw.githubusercontent.com/HimikoS/Mangayomi-Extensions/refs/heads/master/icon/src/all/xvideos.png",
+    iconUrl: "https://raw.githubusercontent.com/HimikoS/Mangayomi-Extensions/refs/heads/master/icon/all/xvideos.png",
     typeSource: "multi",
     itemType: 0, 
     version: "0.1.3",
