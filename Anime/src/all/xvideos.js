@@ -6,7 +6,7 @@ const mangayomiSources = [{
     iconUrl: "https://raw.githubusercontent.com/HimikoS/Mangayomi-Extensions/refs/heads/master/icon/all/xvideos.png",
     typeSource: "multi",
     itemType: 0, 
-    version: "0.1.3",
+    version: "1.0.2",
     pkgPath: "extensions/xvideos.js"
 }];
 
